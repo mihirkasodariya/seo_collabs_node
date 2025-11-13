@@ -8,7 +8,7 @@ const connectedUsers = new Map();
 export const initChatSocket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: "http://localhost:1500", // your frontend URL
+            origin: process.env.FRONTEND_BASE_URL, // your frontend URL
             methods: ["GET", "POST"],
         },
     });
