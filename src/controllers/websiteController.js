@@ -29,12 +29,31 @@ export async function addWebsite(req, res) {
 
 export async function getWebsiteList(req, res) {
     try {
-        const getWebsites = await websiteModel.find({ isActive: true });
-        return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.WEBSITE_GET, getWebsites);
+        let { page = 1, limit = 10 } = req.query;
+        const userId = req.user._id
+        page = parseInt(page);
+        limit = parseInt(limit);
+
+        const skip = (page - 1) * limit;
+
+        const websites = await websiteModel.find({ userId, isActive: true }).skip(skip).limit(limit).sort({ createdAt: -1 });
+
+        const total = await websiteModel.countDocuments({ isActive: true });
+
+        return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.WEBSITE_GET, {
+            data: websites,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+
     } catch (error) {
         console.error('Error in getWebsiteList:', error);
         return response.error(res, resStatusCode.INTERNAL_SERVER_ERROR, resMessage.INTERNAL_SERVER_ERROR, {});
-    };
+    }
 };
 
 export async function getWebsite(req, res) {
