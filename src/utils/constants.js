@@ -9,6 +9,7 @@ export const resMessage = {
   USER_FOUND: "An account with this email already exists!",
   USER_REGISTER: "Successfully signed up. Login to access your account!",
   USER_NOT_FOUND: "You don't have an account yet. Please sign up first!",
+  OTP_VERIFICATION_NOT_COMPLETED: "Please re-verify your details on the registration page. Check your email for the OTP, enter it to complete verification, and then log in.",
   GOOGLE_USER:
     "Your account was created using Google. Please continue by signing in with 'Sign in with Google'.",
   INCORRECT_PASSWORD:
@@ -16,16 +17,31 @@ export const resMessage = {
   LOGIN_SUCCESS: "Hello You're logged in successfully!",
   ACCESS_DENIED: "Access Denied!",
   ACTION_COMPLETE: "Action completed successfully.",
-
+  EMAIL_VERIFIED_SUCCESSFULLY: "email verified successfully.",
   WEBSITE_EXISTS: "Website already exists",
   WEBSITE_ADD: "Website added successfully",
   WEBSITE_GET: "Website fetched successfully",
   WEBSITE_UPDATED: "Website updated successfully",
   WEBSITE_DELETED: "Website deleted successfully",
-
   LINK_EXCHANGE_GET: "Link Exchange fetched successfully",
-  // WEBSITE_UPDATED: "Website updated successfully",
-  // WEBSITE_DELETED: "Website deleted successfully",
+  RETRY_OTP: "Oops! Something went wrong. Please try again in a few seconds.",
+  INVALID_OTP: "Invalid OTP",
+  EXPIRED_OTP: "OTP has expired",
+  OTP_ALREDY_USE: "User already verified",
+  OTP_SEND: "New OTP sent successfully",
+  ADMIN_NOT_FOUND: "This admin account does not exist.",
+
+  PLAN_ADD: "Plan added successfully",
+  PLAN_GET: "Plan fetched successfully",
+  PLAN_UPDATED: "Plan updated successfully",
+
+  REQUEST_EXCHANGE: "Exchange request sent successfully.",
+  URL_NOT_MATCH: "URL does not match. Please check the URL.",
+  GET_EXCHANGE_LIST: "Exchange list fetched successfully.",
+  STATUS_UPDATE_EXCHANGE: "Exchange status updated successfully.",
+
+  ADD_REPORT_USER: "User reported successfully",
+
 };
 
 export const resStatusCode = {
@@ -44,11 +60,15 @@ export const resStatusCode = {
   NOT_IMPLEMENTED: 501, // Not implemented on server
   SERVICE_UNAVAILABLE: 503, // Server temporarily unavailable
   GATEWAY_TIMEOUT: 504, // Gateway timeout (useful for proxy setups)
-  INVALID_TOKEN: 505, // invalid or expric token
+  INVALID_TOKEN: 401, // invalid or expric token
 };
 
 export const dbTableName = {
   AUTH: "users",
   WEBSITE: "websites",
-  CHAT: "chats"
+  CHAT: "chats",
+  TEMP_OTP: "temp_otps",
+  PLANS: "plans",
+  USER_EXCHANGE: "user_exchanges",
+  REPORT_USER : "reported_user"
 };

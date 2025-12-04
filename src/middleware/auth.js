@@ -51,6 +51,7 @@ export async function validateAccessToken(req, res, next) {
 
 export function authorizeRoles(...allowedRoles) {
     return (req, res, next) => {
+        console.log(req.user)
         try {
             if (!req.user || !allowedRoles.includes(req.user.role)) {
                 return res.status(resStatusCode.FORBIDDEN).json({ success: false, status: 0, message: resMessage.ACCESS_DENIED, data: {} });
@@ -61,3 +62,70 @@ export function authorizeRoles(...allowedRoles) {
         };
     };
 };
+
+
+const otpAttempts = {};
+
+const blockDurations = [
+    2 * 60 * 1000,         // 2 minutes
+    60 * 60 * 1000,        // 1 hour
+    5 * 60 * 60 * 1000,    // 5 hours
+    24 * 60 * 60 * 1000    // 24 hours
+];
+
+export function otpBlockMiddleware(req, res, next) {
+    const { email } = req.body;
+
+    if (!email) {
+        return response.error(res, 400, "Email is required");
+    }
+
+    const userData = otpAttempts[email];
+
+    if (
+        userData &&
+        userData.blockUntil &&
+        Date.now() < userData.blockUntil
+    ) {
+        const waitSec = Math.ceil((userData.blockUntil - Date.now()) / 1000);
+
+        return response.error(
+            res,
+            resStatusCode.TOO_MANY_REQUESTS,
+            `Too many attempts. Try again after ${waitSec} seconds.`,
+            {}
+        );
+    }
+
+    next();
+}
+
+export function increaseOtpAttempt(email) {
+    if (!otpAttempts[email]) {
+        otpAttempts[email] = { attempts: 0, blockLevel: 0, blockUntil: 0 };
+    }
+
+    const user = otpAttempts[email];
+    user.attempts += 1;
+
+    if (user.attempts >= 5) {
+        const duration =
+            blockDurations[user.blockLevel] ||
+            blockDurations[blockDurations.length - 1];
+
+        user.blockUntil = Date.now() + duration;
+
+        if (user.blockLevel < blockDurations.length - 1) {
+            user.blockLevel += 1;
+        }
+
+        user.attempts = 0;
+        return user.blockUntil;
+    }
+
+    return null;
+}
+
+export function resetOtpAttempts(email) {
+    delete otpAttempts[email];
+}

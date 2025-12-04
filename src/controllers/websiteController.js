@@ -30,7 +30,15 @@ export async function addWebsite(req, res) {
 export async function getWebsiteList(req, res) {
     try {
         let { page = 1, limit = 10 } = req.query;
-        const userId = req.user._id
+        let userId;
+        if (req.user.role === 0) {
+            userId = req.query.userId;
+            console.log('jjdfd', userId)
+        } else {
+            userId = req.user._id;
+
+        }
+        console.log('userId', userId)
         page = parseInt(page);
         limit = parseInt(limit);
 
@@ -38,7 +46,7 @@ export async function getWebsiteList(req, res) {
 
         const websites = await websiteModel.find({ userId, isActive: true }).skip(skip).limit(limit).sort({ createdAt: -1 });
 
-        const total = await websiteModel.countDocuments({ isActive: true });
+        const total = await websiteModel.countDocuments({ userId, isActive: true });
 
         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.WEBSITE_GET, {
             data: websites,
@@ -90,11 +98,7 @@ export const updateWebsite = async (req, res) => {
 export const deleteWebsite = async (req, res) => {
     const { id } = req.params;
     try {
-        await websiteModel.findByIdAndUpdate(
-            id,
-            { $set: { isActive: false } },
-            { new: true, runValidators: true }
-        );
+        await websiteModel.findByIdAndDelete(id);
         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.WEBSITE_DELETED, {});
     } catch (error) {
         console.error('Error in updateBlogById:', error);

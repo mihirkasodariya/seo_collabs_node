@@ -10,7 +10,12 @@ const authRegisterSchema = new Schema(
         img: { type: String, required: false, default: "" },
         bio: { type: String, required: false, default: "" },
         password: { type: String, require: true },
+        country: { type: String, require: true },
         role: { type: Number, default: 1 }, // Role identifier: 1 -> User, 0 -> Admin (default: User)
+        isSubscription: { type: Boolean, default: false },
+        isVerified: { type: Boolean, default: false },
+        isBlock: { type: Boolean, default: false },
+        isReportUser: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
     },
     { timestamps: true }
@@ -46,9 +51,28 @@ export const authValidation = Joi.object({
     password: Joi.string().min(6).max(30).required().messages({
         "string.empty": "Password is required",
         "string.min": "Password must be at least 6 characters",
+        "string.max": "Password cannot exceed 30 characters",
         "any.required": "Password is required",
     }),
+    bio: Joi.string().optional().max(500).messages({
+        "string.max": "Bio cannot exceed 500 characters",
+    }),
+    country: Joi.string().required().messages({
+        "string.base": "Country must be a string.",
+        "string.empty": "Country cannot be empty.",
+        "any.required": "Country is required."
+    }),
+    img: Joi.string().optional().messages({
+        "string.base": "Image URL must be a string",
+    }),
+    role: Joi.number().optional().default(1).messages({
+        "number.base": "Role must be a number",
+        "any.only": "Role must be either 0 (Admin) or 1 (User)",
+    }),
+    isVerified: Joi.boolean().default(false),
+    isActive: Joi.boolean().default(true)
 });
+
 
 export const idValidation = Joi.object({
     id: Joi.string().length(24).hex().required().messages({

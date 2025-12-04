@@ -19,7 +19,7 @@ const saveLocally = async (file, folderName, filePrefix, fieldname) => {
   const filePath = path.join(localFolder, filename);
   fs.writeFileSync(filePath, file.buffer);
 
-  const fileUrl = `http://localhost:${process.env.PORT || 3000}/${folderName}/${filename}`;
+  const fileUrl = `http://192.168.1.7:3000:${process.env.PORT || 3000}/${folderName}/${filename}`;
   console.log("Saved file:", fileUrl);
 
   return {
@@ -90,3 +90,17 @@ export const profileImage = createLocalUploader({
   fieldName: "img",
   fileSizeMB: 1,
 });
+
+const dynamicFeatureFields = Array.from({ length: 20 }, (_, i) => ({
+  name: `features[${i}].icon`,
+  maxCount: 1,
+}));
+
+export const planIconsImage = createLocalUploader({
+  folderName: "icon",
+  filePrefix: "icon",
+  fieldType: "fields",
+  customFields: dynamicFeatureFields,
+  fileSizeMB: 2,
+});
+

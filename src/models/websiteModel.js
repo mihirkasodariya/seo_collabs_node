@@ -9,7 +9,7 @@ const websiteSchema = new Schema(
         url: { type: String, required: true },
         type: { type: String, required: true },
         Categories: { type: [String], required: true },
-        linkReqs: { type: String, required: true },
+        linkReqs: { type: String, required: false },
         isLinkExchange: { type: Boolean, required: true },
         isActive: { type: Boolean, default: true },
     },
@@ -35,12 +35,7 @@ export const websiteValidation = Joi.object({
         "array.min": "Please select at least 1 category",
         "any.required": "Categories are required",
     }),
-    linkReqs: Joi.string().required().messages({
-        "string.empty": "Link requirements are required",
-        "string.min": "Link requirements must be at least 2 characters long",
-        "string.max": "Link requirements cannot exceed 500 characters",
-        "any.required": "Link requirements are required",
-    }),
+    linkReqs: Joi.string().optional().allow("").messages(),
     isLinkExchange: Joi.boolean().required().messages({
         "string.empty": "isLinkExchange requirements are required",
         "any.required": "isLinkExchange requirements are required",
