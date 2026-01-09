@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Verification OTP</title>
+    <style>
+        /* Reset styles for email compatibility */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .email-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #202124;
+            color: white;
+            padding: 24px 30px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            color: #e8eaed;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .intro-section {
+            margin-bottom: 24px;
+        }
+
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #202124;
+        }
+
+        .message {
+            color: #5f6368;
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+
+        .website-info {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 20px 0;
+            border-left: 3px solid #1a73e8;
+        }
+
+        .website-url {
+            font-family: monospace;
+            font-size: 15px;
+            color: #1a73e8;
+            word-break: break-all;
+        }
+
+        .verification-section {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 24px;
+            margin: 30px 0;
+            text-align: center;
+            border: 1px solid #e8eaed;
+        }
+
+        .section-title {
+            font-size: 16px;
+            color: #5f6368;
+            margin-bottom: 16px;
+        }
+
+        .otp-display {
+            font-size: 40px;
+            font-weight: 600;
+            letter-spacing: 10px;
+            color: #202124;
+            font-family: monospace;
+            background-color: white;
+            padding: 16px 20px;
+            border-radius: 4px;
+            border: 1px dashed #dadce0;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .otp-hint {
+            font-size: 14px;
+            color: #5f6368;
+            margin-top: 12px;
+        }
+
+        .expiry-notice {
+            background-color: #fef7e0;
+            border-radius: 4px;
+            padding: 14px 18px;
+            margin: 25px 0;
+            font-size: 14px;
+            border-left: 4px solid #fbbc04;
+        }
+
+        .expiry-label {
+            font-weight: 600;
+            color: #202124;
+        }
+
+        .instructions {
+            margin: 25px 0;
+            padding-left: 18px;
+        }
+
+        .instructions li {
+            margin-bottom: 12px;
+            color: #5f6368;
+            font-size: 14px;
+        }
+
+        .security-note {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 16px;
+            margin: 30px 0 20px;
+            font-size: 13px;
+            border-top: 2px solid #e8eaed;
+        }
+
+        .security-title {
+            font-weight: 600;
+            color: #202124;
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #e8eaed;
+            font-size: 12px;
+            color: #5f6368;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #5f6368;
+            text-decoration: underline;
+        }
+
+        .no-reply {
+            font-style: italic;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .otp-display {
+                font-size: 32px;
+                letter-spacing: 8px;
+                padding: 12px 16px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-wrapper">
+        <div class="email-container">
+            <div class="header">
+                <div class="header-title">Website Verification Required</div>
+                <div class="header-subtitle">Confirm ownership of your website</div>
+            </div>
+
+            <div class="content">
+                <div class="intro-section">
+                    <p class="greeting">Hello <%= data.userName %>,</p>
+                    <p class="message">You've initiated the website verification process. To complete the verification,
+                        please use the 6-digit verification code provided below.</p>
+
+                    <div class="website-info">
+                        <div style="font-size: 14px; color: #5f6368; margin-bottom: 6px;">Website to verify:</div>
+                        <div class="website-url">
+                            <%= data.websiteUrl %>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="verification-section">
+                    <div class="section-title">Your Website Verification Code</div>
+                    <div class="otp-display">
+                        <%= data.otpCode %>
+                    </div>
+                    <div class="otp-hint">Enter this 6-digit code on the verification page</div>
+
+                </div>
+                <div class="expiry-notice">
+                    <span class="expiry-label">Expires in:</span> 10 minutes
+                </div>
+
+                <div>
+                    <p class="message"><strong>Next steps:</strong></p>
+                    <ol class="instructions">
+                        <li>Return to the website verification page</li>
+                        <li>Enter the 6-digit verification code above</li>
+                        <li>Complete the verification process</li>
+                    </ol>
+                </div>
+
+                <div class="security-note">
+                    <div class="security-title">Security Information</div>
+                    <p>This verification code is intended only for the recipient of this email. Do not share this
+                        code
+                        with anyone, including support staff. Our team will never ask you for this verification
+                        code.
+                    </p>
+                </div>
+
+                <p class="message">If you did not initiate this verification, please disregard this email. No
+                    changes
+                    will be made to your account.</p>
+
+            </div>
+            <div class="footer">
+                <p>This is an automated message from the Website Verification System.</p>
+                <p>Need help? Contact our <a
+                        href="mailto:support@seocollabs.com?subject=Support%20Request&body=Hello%20SEO%20Collabs%20Team,">
+                        support team</a>.</p>
+                <p class="no-reply">Please do not reply to this email. This inbox is not monitored.</p>
+                <p>&copy; 2025 SEO Collabs. All rights reserved.</p>
+            </div>
+        </div>
+</body>
+
+</html>

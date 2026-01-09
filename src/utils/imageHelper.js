@@ -19,7 +19,7 @@ const saveLocally = async (file, folderName, filePrefix, fieldname) => {
   const filePath = path.join(localFolder, filename);
   fs.writeFileSync(filePath, file.buffer);
 
-  const fileUrl = `http://192.168.1.7:3000:${process.env.PORT || 3000}/${folderName}/${filename}`;
+  const fileUrl = `http://192.168.1.5:${process.env.PORT || "3000"}/${folderName}/${filename}`;
   console.log("Saved file:", fileUrl);
 
   return {

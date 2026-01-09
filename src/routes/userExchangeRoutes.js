@@ -4,6 +4,9 @@ import {
    addRequestExchange,
    getAllMyExchangePendingVerify,
    getAllRequestExchange,
+   getCompletedList,
+   getMyRequestList,
+   getPartnerRequestList,
    getRequestExchangeById,
    updateExchangeStatusById,
    updateSeenStatusRequestExchange
@@ -17,4 +20,7 @@ router.get("/getAllMyExchangePendingVerify", validateAccessToken, getAllMyExchan
 router.patch("/updateExchangeStatusById/:id", validateAccessToken, updateExchangeStatusById);
 router.patch("/updateSeenStatusRequestExchange", validateAccessToken, updateSeenStatusRequestExchange);
 
+router.get("/getMyRequestList", validateAccessToken, getMyRequestList);
+router.get("/getPartnerRequestList", validateAccessToken, getPartnerRequestList);
+router.get("/getCompletedList", validateAccessToken, getCompletedList);
 export default router;

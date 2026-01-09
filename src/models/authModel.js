@@ -1,6 +1,6 @@
 import Joi from "joi";
 import mongoose, { model } from "mongoose";
-const { Schema } = mongoose;
+const { Schema, Types } = mongoose;
 import { dbTableName } from "../utils/constants.js";
 
 const authRegisterSchema = new Schema(
@@ -10,11 +10,29 @@ const authRegisterSchema = new Schema(
         img: { type: String, required: false, default: "" },
         bio: { type: String, required: false, default: "" },
         password: { type: String, require: true },
-        country: { type: String, require: true },
         role: { type: Number, default: 1 }, // Role identifier: 1 -> User, 0 -> Admin (default: User)
+        country: { type: String, require: true },
         isSubscription: { type: Boolean, default: false },
         isVerified: { type: Boolean, default: false },
-        isBlock: { type: Boolean, default: false },
+        referredBy: { type: Types.ObjectId, ref: dbTableName.AUTH, default: null, },
+        referralStats: {
+            total: { type: Number, default: 0 },
+            pending: { type: Number, default: 0 },
+            successful: { type: Number, default: 0 },
+        },
+        blocksList: [
+            {
+                type: Types.ObjectId,
+                ref: dbTableName.AUTH,
+            }
+        ],
+
+        blockedBy: [
+            {
+                type: Types.ObjectId,
+                ref: dbTableName.AUTH,
+            }
+        ],
         isReportUser: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
     },
@@ -54,14 +72,15 @@ export const authValidation = Joi.object({
         "string.max": "Password cannot exceed 30 characters",
         "any.required": "Password is required",
     }),
-    bio: Joi.string().optional().max(500).messages({
-        "string.max": "Bio cannot exceed 500 characters",
+    bio: Joi.string().optional().max(100).messages({
+        "string.max": "Bio cannot exceed 100 characters",
     }),
     country: Joi.string().required().messages({
         "string.base": "Country must be a string.",
         "string.empty": "Country cannot be empty.",
         "any.required": "Country is required."
     }),
+    referralCode: Joi.string().optional().allow(""),
     img: Joi.string().optional().messages({
         "string.base": "Image URL must be a string",
     }),

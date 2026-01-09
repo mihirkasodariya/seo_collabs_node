@@ -29,6 +29,7 @@ export const resMessage = {
   EXPIRED_OTP: "OTP has expired",
   OTP_ALREDY_USE: "User already verified",
   OTP_SEND: "New OTP sent successfully",
+  WEB_OTP_SEND: "OTP sent successfully",
   ADMIN_NOT_FOUND: "This admin account does not exist.",
 
   PLAN_ADD: "Plan added successfully",
@@ -40,8 +41,10 @@ export const resMessage = {
   GET_EXCHANGE_LIST: "Exchange list fetched successfully.",
   STATUS_UPDATE_EXCHANGE: "Exchange status updated successfully.",
 
+  WEBSITE_VERIFY: "Website ownership verified",
+  WEBSITE_FAILED: "Verification failed. Meta tag not found",
   ADD_REPORT_USER: "User reported successfully",
-
+  MSG_LIMIT: "Your message limit has been reached. You can send an exchange request again after 24 hours."
 };
 
 export const resStatusCode = {
@@ -70,5 +73,9 @@ export const dbTableName = {
   TEMP_OTP: "temp_otps",
   PLANS: "plans",
   USER_EXCHANGE: "user_exchanges",
-  REPORT_USER : "reported_user"
+  REPORT_USER: "reported_user",
+  ACTIVITY: "activity",
+  FAQ: "faq",
+  PAYMENT_HISTORY: "payment_historys",
+  SUBSCRIPTION:"subscriptions"
 };

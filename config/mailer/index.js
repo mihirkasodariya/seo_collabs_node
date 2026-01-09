@@ -17,7 +17,7 @@ const templateRenderer = new Email({
   },
 });
 
-const sendMail = async (template, subject, email, emailData, from = process.env.FROM_MAIL, type = 'simple', attachmentBuffer = null, attachmentFilename = null) => {
+const sendMail = async (template, subject, email, emailData, from = process.env.SMTP_USERNAME, type = 'simple', attachmentBuffer = null, attachmentFilename = null) => {
   try {
     const locals = { data: emailData };
     locals.site_title = process.env.SITE_TITLE || '';

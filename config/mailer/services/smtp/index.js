@@ -1,10 +1,12 @@
 import { createTransport } from 'nodemailer';
-
+import dotenv from 'dotenv';
+dotenv.config();
+console.log('process.env.SMTP_USERNAME', process.env.SMTP_USERNAME)
 const transport = createTransport({
   pool: true,
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE?.toLowerCase() === 'true',
+  secure: process.env.SMTP_SECURE,
   service: process.env.SMTP_SERVICE,
   auth: {
     user: process.env.SMTP_USERNAME,

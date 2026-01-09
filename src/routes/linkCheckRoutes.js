@@ -1,9 +1,9 @@
 import { Router } from "express";
 const router = Router();
-import { addReportUser } from "../controllers/reportUserController.js";
+import { getLinkCheck } from "../controllers/linkCheckController.js";
 import { validateAccessToken, authorizeRoles } from "../middleware/auth.js";
 
-router.post("/addReportUser", validateAccessToken, addReportUser);
+router.post("/getLinkCheck", validateAccessToken, getLinkCheck);
 
 
 export default router;

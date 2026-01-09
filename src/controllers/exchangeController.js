@@ -1,68 +1,8 @@
 import {
-    idValidation,
     websiteModel,
-    websiteValidation
 } from "../models/websiteModel.js";
 import response from "../utils/response.js";
 import { resStatusCode, resMessage } from "../utils/constants.js";
-
-// showing list all website
-// export async function getLinkExchangeList(req, res) {
-//     try {
-//         const { search, type, category, page = 1, limit = 10 } = req.query;
-//         const filter = { isActive: true, isLinkExchange: true };
-
-//         if (search) {
-//             filter.$or = [
-//                 { url: { $regex: search, $options: 'i' } },
-//                 { type: { $regex: search, $options: 'i' } },
-//                 { Categories: { $elemMatch: { $regex: search, $options: 'i' } } },
-//             ];
-//         };
-//         if (type) {
-//             filter.type = type;
-//         };
-
-//         if (category) {
-//             filter.Categories = { $in: [category] };
-//         };
-
-//         const pageNum = parseInt(page, 10) || 1;
-//         const limitNum = parseInt(limit, 10) || 10;
-//         const skip = (pageNum - 1) * limitNum;
-
-//         const total = await websiteModel.countDocuments(filter);
-
-//         const getLinkExchanges = await websiteModel.find(filter).skip(skip).limit(limitNum).sort({ createdAt: -1 }).populate('userId');
-
-//         const transformedRecords = getLinkExchanges.map(record => ({
-//             _id: record._id,
-//             userId: record.userId?._id || null,
-//             userName: record.userId?.name || null,
-//             email: record.userId?.email || null,
-//             url: record.url,
-//             type: record.type,
-//             Categories: record.Categories,
-//             linkReqs: record.linkReqs,
-//             isLinkExchange: record.isLinkExchange,
-//             isActive: record.isActive,
-//             createdAt: record.createdAt,
-//             updatedAt: record.updatedAt,
-//             __v: record.__v,
-//         }));
-
-//         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.LINK_EXCHANGE_GET, {
-//             records: finalRecords,
-//             total,
-//             page: pageNum,
-//             limit: limitNum,
-//             totalPages: Math.ceil(total / limitNum),
-//         });
-//     } catch (error) {
-//         console.error('Error in getLinkExchangeList:', error);
-//         return response.error(res, resStatusCode.INTERNAL_SERVER_ERROR, resMessage.INTERNAL_SERVER_ERROR, {});
-//     };
-// };
 
 export async function getLinkExchangeList(req, res) {
     try {

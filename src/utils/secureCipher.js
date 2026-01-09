@@ -39,9 +39,6 @@ export function decrypt(messagebase64, callback) {
     };
 };
 
-// exports.encrypt = encrypt;
-// exports.decrypt = decrypt;
-
 export function extractDomain(fullUrl) {
     try {
         let urlObj = new URL(fullUrl);

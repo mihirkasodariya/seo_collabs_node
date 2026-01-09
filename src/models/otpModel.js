@@ -5,9 +5,11 @@ import { dbTableName } from "../utils/constants.js";
 
 const otpRegisterSchema = new Schema(
     {
-        userId: { type: Types.ObjectId, ref: dbTableName.AUTH, require: true },
-        otp: String,
-        otpExpires: Date,
+        userId: { type: Types.ObjectId, ref: dbTableName.AUTH, require: false },
+        websiteUrl: { type: String, require: false },
+        email: { type: String, require: false },
+        otp: { type: String, require: true },
+        otpExpires: { type: Date, require: true },
     },
     { timestamps: true }
 );

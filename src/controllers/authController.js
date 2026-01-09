@@ -7,16 +7,17 @@ import {
 import response from "../utils/response.js";
 import { resStatusCode, resMessage } from "../utils/constants.js";
 import { generateJWToken, increaseOtpAttempt, resetOtpAttempts } from "../middleware/auth.js";
-import { hash, compare } from "bcrypt";
+// import { hash, compare } from "bcrypt";
 import sendMail from "../../config/mailer/index.js";
 import { emailValidation, otpModel, verifyOtpValidation } from "../models/otpModel.js";
 import { encrypt, decrypt } from "../utils/secureCipher.js";
 import { websiteModel } from "../models/websiteModel.js";
 import { userExchangeModel } from "../models/userExchangeModel.js";
 import { messageModel } from "../models/chatModel.js"
+import mongoose from "mongoose";
 
 export async function register(req, res) {
-    const { name, email, password, country } = req.body;
+    const { name, email, password, country, referralCode } = req.body;
     const { error } = authValidation.validate(req.body);
     if (error) {
         return response.error(res, resStatusCode.CLIENT_ERROR, error.details[0].message);
@@ -26,7 +27,6 @@ export async function register(req, res) {
         if (userExists?.email && userExists?.isVerified === true) {
             return response.error(res, resStatusCode.CONFLICT, resMessage.USER_FOUND, {});
         };
-        // const hashedPassword = await hash(password, 10);
         let encryptPassword = await encrypt(password, function (pass) {
             return pass;
         });
@@ -40,11 +40,20 @@ export async function register(req, res) {
             if (userExists?.email && userExists?.isVerified === true) {
                 return response.error(res, resStatusCode.CONFLICT, resMessage.USER_FOUND, {});
             };
+            let referredBy = null;
+
+            if (referralCode) {
+                const referrer = await authModel.findById({ _id: referralCode });
+                if (referrer) {
+                    referredBy = referrer._id;
+                };
+            };
             createNewUser = await authModel.create({
                 name,
                 email,
                 password: encryptPassword,
                 country,
+                referredBy,
             });
         } else {
             await authModel.updateOne(
@@ -63,7 +72,7 @@ export async function register(req, res) {
             otpExpires,
         });
 
-        await sendMail("verify_otp", "SEO Collabe: Your Verification OTP", email, {
+        await sendMail("verify_otp", "SEO Collabs: Your Verification OTP", email, {
             fullName: name,
             email: email,
             otp: otp,
@@ -95,10 +104,6 @@ export async function verifyOtp(req, res) {
 
             const blockTime = increaseOtpAttempt(email);
 
-            // if (blockTime) {
-            //     const waitSec = Math.ceil((blockTime - Date.now()) / 1000);
-            //     return response.error(res, resStatusCode.TOO_MANY_REQUESTS, `Too many wrong attempts. Try again after ${waitSec} seconds.`, {});
-            // };
             if (blockTime) {
                 const remainingMs = blockTime - Date.now();
                 const remainingSec = Math.ceil(remainingMs / 1000);
@@ -120,6 +125,15 @@ export async function verifyOtp(req, res) {
         resetOtpAttempts(email);
 
         await authModel.findByIdAndUpdate(user._id, { isVerified: true });
+        await authModel.findByIdAndUpdate(
+            user.referredBy,
+            {
+                $inc: {
+                    "referralStats.total": 1,
+                    "referralStats.pending": 1
+                }
+            }
+        );
         await otpModel.deleteMany({ userId: user._id });
         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.EMAIL_VERIFIED_SUCCESSFULLY, {});
     } catch (error) {
@@ -145,7 +159,7 @@ export async function resendOtp(req, res) {
             return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.OTP_ALREDY_USE, {});
         };
         const otp = Math.floor(100000 + Math.random() * 900000);
-        const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        const otpExpires = Date.now() + 10 * 60 * 1000;
 
         await otpModel.deleteMany({ userId: user._id });
 
@@ -170,19 +184,11 @@ export async function login(req, res) {
         return response.error(res, resStatusCode.CLIENT_ERROR, error.details[0].message);
     };
     try {
+        console.log(email)
         const user = await authModel.findOne({ email, isActive: true });
-
-        // if (user?.isVerified !== true) {
-        //     return response.error(res, resStatusCode.FORBIDDEN, resMessage.OTP_VERIFICATION_NOT_COMPLETED, {});
-        // }
-        // if (!user) {
-        //     return response.error(res, resStatusCode.FORBIDDEN, resMessage.USER_NOT_FOUND, {});
-        // };
-        // const validPassword = await compare(password, user.password);
-        // if (!validPassword) {
-        //     return response.error(res, resStatusCode.UNAUTHORISED, resMessage.INCORRECT_PASSWORD, {});
-        // };
+        console.log('user', user)
         if (user) {
+
             if (user?.isVerified === true) {
                 await decrypt(user?.password, async (responsePassword) => {
                     if (password === responsePassword) {
@@ -252,9 +258,9 @@ export async function getActiveUsersList(req, res) {
         let limit = parseInt(req.query.limit) || 10;
         let search = req.query.search ? req.query.search.trim() : "";
         let userType = req.query.userType || "";
+        let selectedCountry = req.query.selectedCountry || "";
         page = page < 1 ? 1 : page;
         limit = limit < 1 ? 10 : limit;
-        console.log('userType', userType)
         const skip = (page - 1) * limit;
         let filter = { isActive: true };
 
@@ -268,19 +274,91 @@ export async function getActiveUsersList(req, res) {
         if (userType === "normal") {
             filter.isSubscription = false
         }
-        const totalUsers = await authModel.countDocuments(filter);
+        if (selectedCountry) {
+            filter.country = selectedCountry;
+        }
+        const reqUserId = req.user._id;
 
-        const users = await authModel.find(filter).select("-password").skip(skip).limit(limit).sort({ createdAt: -1 })
+        const totalUsers = await authModel.countDocuments({ ...filter, _id: { $ne: reqUserId } });
+
+        const users = await authModel.find({ ...filter, _id: { $ne: reqUserId } }).select("-password").skip(skip).limit(limit).sort({ createdAt: -1 });
         const updatedUsers = await Promise.all(
             users.map(async (user) => {
-                const totalWebCount = await websiteModel.countDocuments({ userId: user._id, isActive: true, isLinkExchange: true, });
+
+                const completedTasks = await userExchangeModel.aggregate([
+                    {
+                        $match: {
+                            status: "completed",
+                            isActive: true,
+                        },
+                    },
+                    {
+                        $group: {
+                            _id: "$taskId",
+                            records: { $push: "$$ROOT" },
+                            count: { $sum: 1 },
+                        },
+                    },
+                    {
+                        $match: {
+                            count: 2,
+                        },
+                    },
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    {
+                                        $gt: [
+                                            {
+                                                $size: {
+                                                    $filter: {
+                                                        input: "$records",
+                                                        as: "r",
+                                                        cond: { $eq: ["$$r.userId", user._id] },
+                                                    },
+                                                },
+                                            },
+                                            0,
+                                        ],
+                                    },
+                                    {
+                                        $gt: [
+                                            {
+                                                $size: {
+                                                    $filter: {
+                                                        input: "$records",
+                                                        as: "r",
+                                                        cond: { $eq: ["$$r.ownerId", user._id] },
+                                                    },
+                                                },
+                                            },
+                                            0,
+                                        ],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                ]);
+
+                const completedExchangeCount = completedTasks.length;
+
+                const totalWebCount = await websiteModel.countDocuments({
+                    userId: user._id,
+                    isActive: true,
+                    isLinkExchange: true,
+                });
 
                 return {
                     ...user.toObject(),
                     websiteCount: totalWebCount,
+                    completedExchangeCount,
                 };
             })
-        ); return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.ACTION_COMPLETE, {
+        );
+
+        return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.ACTION_COMPLETE, {
             records: updatedUsers,
             pagination: {
                 page,
@@ -312,164 +390,12 @@ export async function getUserById(req, res) {
     };
 };
 
-// export async function getNetworkUserById(req, res) {
-//     try {
-//         const { ownerId, userId } = req.params;
-//         console.log('owenerId', ownerId)
-//         console.log('userId', userId)
-//         // LAST 7 DAYS
-//         const oneWeekAgo = new Date();
-//         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-//         // SUPER FAST PARALLEL CALLS
-//         const [user, webList, exchangesWorks, chats] = await Promise.all([
-//             authModel.findOne({ _id: userId }).select("-password"),
-//             websiteModel.find({ userId }),
-//             userExchangeModel.find({
-//                 isActive: true,
-//                 $or: [
-//                     { userId, ownerId },
-//                     { userId: ownerId, ownerId: userId }
-//                 ]
-//             }),
-//             messageModel.find({
-//                 $or: [
-//                     { senderId: ownerId, receiverId: userId },
-//                     { senderId: userId, receiverId: ownerId }
-//                 ],
-//                 createdAt: { $gte: oneWeekAgo }
-//             }).sort({ createdAt: 1 })
-//         ]);
-
-//         // ----------------------------------
-//         // COMPLETED TASK COUNT
-//         // ----------------------------------
-//         let completedTaskCount = 0;
-//         const grouped = {};
-
-//         for (const item of exchangesWorks)
-//             (grouped[item.taskId] ??= []).push(item);
-
-//         // for (const items of Object.values(grouped)) {
-//         //     if (
-//         //         items.length === 2 &&
-//         //         items[0].status === "completed" &&
-//         //         items[1].status === "completed"
-//         //     ) completedTaskCount++;
-//         // }
-//         for (const items of Object.values(grouped)) {
-//             // Jis taskId ke kisi bhi record me status completed ho → count as completed task
-//             const isCompleted = items.some(x => x.status === "completed");
-//             // console.log('isCompleted', isCompleted)
-//             if (isCompleted) completedTaskCount++;
-//         }
-
-
-//         // ----------------------------------
-//         // NORMAL RESPONSE RATE
-//         // ----------------------------------
-//         let sentByYou = 0;
-//         let repliedByOpponent = 0;
-
-//         chats.forEach(msg => {
-//             if (msg.senderId.toString() === ownerId) sentByYou++;
-//             if (msg.senderId.toString() === userId) repliedByOpponent++;
-//         });
-
-//         let normalRate =
-//             sentByYou > 0 ? Math.round((repliedByOpponent / sentByYou) * 100) : 0;
-
-//         // ----------------------------------
-//         // WEIGHTED RESPONSE CALCULATION
-//         // ----------------------------------
-//         let totalResponseTime = 0;
-//         let responseCount = 0;
-//         let weightedPointsTotal = 0;
-//         let totalRequests = 0;
-
-//         for (let i = 0; i < chats.length - 1; i++) {
-//             const a = chats[i];
-//             const b = chats[i + 1];
-
-//             if (
-//                 a.senderId.toString() === ownerId &&
-//                 b.senderId.toString() === userId
-//             ) {
-//                 const diffMs = new Date(b.createdAt) - new Date(a.createdAt);
-//                 totalResponseTime += diffMs;
-//                 responseCount++;
-
-//                 const diffHours = diffMs / 3600000;
-//                 totalRequests++;
-
-//                 let points = 0;
-//                 if (diffHours <= 12) points = 1.0;
-//                 else if (diffHours <= 24) points = 0.9;
-//                 else if (diffHours <= 48) points = 0.8;
-//                 else if (diffHours <= 72) points = 0.7;
-//                 else if (diffHours <= 96) points = 0.6;
-//                 else points = 0.4;
-
-//                 weightedPointsTotal += points;
-//             }
-//         }
-
-//         // No response add
-//         const noResponse = sentByYou - responseCount;
-//         if (noResponse > 0) totalRequests += noResponse;
-
-//         let weightedRate = 0;
-//         if (totalRequests > 0)
-//             weightedRate = Math.round((weightedPointsTotal / totalRequests) * 100);
-
-//         // ----------------------------------
-//         // FINAL MERGED RESPONSE RATE (0–100 CLAMPED)
-//         // ----------------------------------
-//         let finalResponseRate = Math.round((normalRate + weightedRate * 2) / 3);
-
-//         // clamp 0–100 range
-//         finalResponseRate = Math.min(100, Math.max(0, finalResponseRate));
-
-//         // ----------------------------------
-//         // AVG RESPONSE TIME (HOURS)
-//         // ----------------------------------
-//         let avgResponseTime = 0;
-//         if (responseCount > 0)
-//             avgResponseTime = Math.round(totalResponseTime / responseCount / 3600000);
-
-//         // ----------------------------------
-//         // SEND FINAL RESPONSE
-//         // ----------------------------------
-//         return response.success(
-//             res,
-//             resStatusCode.ACTION_COMPLETE,
-//             "User details fetched successfully",
-//             {
-//                 user,
-//                 webList,
-//                 exchangesWorks,
-//                 completedTaskCount: Math.floor(completedTaskCount / 2),
-//                 resRate: `${finalResponseRate}%`,
-//                 avgResTime: `${avgResponseTime} hours`
-//             }
-//         );
-
-//     } catch (error) {
-//         console.error("Error:", error);
-//         return response.error(
-//             res,
-//             resStatusCode.INTERNAL_SERVER_ERROR,
-//             resMessage.INTERNAL_SERVER_ERROR,
-//             {}
-//         );
-//     }
-// }
 
 export async function getNetworkUserById(req, res) {
     try {
         const { ownerId, userId } = req.params;
-
-        // =============== PAGINATION PARAMS =================
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
         const pageWeb = parseInt(req.query.pageWeb) || 1;
         const limitWeb = parseInt(req.query.limitWeb) || 10;
 
@@ -479,73 +405,91 @@ export async function getNetworkUserById(req, res) {
         const skipWeb = (pageWeb - 1) * limitWeb;
         const skipEx = (pageEx - 1) * limitEx;
 
-        // LAST 7 DAYS
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-        // --------------------------------------------
-        // MAIN DATA (NO PAGINATION)
-        // --------------------------------------------
+        const reqUser = req.user._id
         const [user, allWebsites, allExchanges, chats] = await Promise.all([
-            authModel.findOne({ _id: userId }).select("-password"),
-            websiteModel.find({ userId }),
+            authModel.findOne({ _id: userObjectId }).select("-password"),
+
+            websiteModel.find({ userId: userObjectId, _id: { $ne: reqUser } }),
+
             userExchangeModel.find({
                 isActive: true,
                 $or: [
-                    { userId, ownerId },
-                    { userId: ownerId, ownerId: userId }
+                    { userId: userObjectId, ownerId: ownerObjectId },
+                    { userId: ownerObjectId, ownerId: userObjectId }
                 ]
             }),
+
             messageModel.find({
                 $or: [
-                    { senderId: ownerId, receiverId: userId },
-                    { senderId: userId, receiverId: ownerId }
+                    { senderId: ownerObjectId, receiverId: userObjectId },
+                    { senderId: userObjectId, receiverId: ownerObjectId }
                 ],
                 createdAt: { $gte: oneWeekAgo }
             }).sort({ createdAt: 1 })
         ]);
 
-        // --------------------------------------------
-        // PAGINATION DATA ONLY
-        // --------------------------------------------
         const [webList, webTotal, exchangesWorks, exTotal] = await Promise.all([
-            websiteModel.find({ userId }).skip(skipWeb).limit(limitWeb),
-            websiteModel.countDocuments({ userId }),
+            websiteModel
+                .find({ userId: userObjectId, isLinkExchange: true })
+                .skip(skipWeb)
+                .limit(limitWeb),
 
-            userExchangeModel.find({
-                isActive: true,
-                $or: [
-                    { userId, ownerId },
-                    { userId: ownerId, ownerId: userId }
-                ]
-            }).skip(skipEx).limit(limitEx),
+            websiteModel.countDocuments({ userId: userObjectId, isLinkExchange: true }),
+
+            userExchangeModel
+                .find({
+                    isActive: true,
+                    status: "completed",
+                    ownerId: ownerObjectId,
+                    userId: userObjectId
+                })
+                .skip(skipEx)
+                .limit(limitEx),
 
             userExchangeModel.countDocuments({
                 isActive: true,
-                $or: [
-                    { userId, ownerId },
-                    { userId: ownerId, ownerId: userId }
-                ]
-            })
+                status: "completed",
+                ownerId: ownerObjectId,
+                userId: userObjectId
+            }),
         ]);
 
-        // ============================================
-        // COMPLETED TASK CALCULATION
-        // ============================================
-        let completedTaskCount = 0;
-        const grouped = {};
+        const completedTasks = await userExchangeModel.aggregate([
+            {
+                $match: {
+                    status: "completed",
+                    isActive: true
+                }
+            },
+            {
+                $group: {
+                    _id: "$taskId",
+                    records: { $push: "$$ROOT" },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $match: { count: 2 }
+            },
+            {
+                $match: {
+                    $expr: {
+                        $and: [
+                            { $in: [userObjectId, "$records.userId"] },
+                            { $in: [userObjectId, "$records.ownerId"] },
+                            { $in: [ownerObjectId, "$records.userId"] },
+                            { $in: [ownerObjectId, "$records.ownerId"] }
+                        ]
+                    }
+                }
+            }
+        ]);
 
-        for (const item of allExchanges)
-            (grouped[item.taskId] ??= []).push(item);
+        const completedTaskCount = completedTasks.length;
 
-        for (const items of Object.values(grouped)) {
-            const isCompleted = items.some(x => x.status === "completed");
-            if (isCompleted) completedTaskCount++;
-        }
-
-        // ============================================
-        // RESPONSE RATE CALCULATION
-        // ============================================
         let sentByYou = 0, repliedByOpponent = 0;
 
         chats.forEach(msg => {
@@ -603,20 +547,14 @@ export async function getNetworkUserById(req, res) {
             ? Math.round(totalResponseTime / responseCount / 3600000)
             : 0;
 
-        // ============================================
-        // ⭐ TRUST SCORE CALCULATION
-        // ============================================
+        const totalTasks = new Set(allExchanges.map(e => e.taskId)).size;
 
-        // 1) Collaboration success (40%)
-        const totalTasks = Object.keys(grouped).length;
         const collabScore = totalTasks > 0
             ? Math.round((completedTaskCount / totalTasks) * 100)
             : 0;
 
-        // 2) Response rate (30%)
         const responseRateScore = finalResponseRate;
 
-        // 3) Response speed (20%)
         let resSpeed = 0;
         if (avgResponseTime <= 6) resSpeed = 100;
         else if (avgResponseTime <= 12) resSpeed = 90;
@@ -624,7 +562,6 @@ export async function getNetworkUserById(req, res) {
         else if (avgResponseTime <= 48) resSpeed = 60;
         else resSpeed = 40;
 
-        // 4) Account age (10%)
         const accountAgeDays = Math.floor(
             (new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24)
         );
@@ -635,7 +572,6 @@ export async function getNetworkUserById(req, res) {
         else if (accountAgeDays <= 180) ageScore = 80;
         else ageScore = 100;
 
-        // ⭐ FINAL TRUST SCORE (0–100)
         const trustScore =
             collabScore * 0.40 +
             responseRateScore * 0.30 +
@@ -644,17 +580,12 @@ export async function getNetworkUserById(req, res) {
 
         const finalTrustScore = Math.round(trustScore);
 
-        // ===========================
-        // SEND FINAL RESPONSE
-        // ===========================
         return response.success(
             res,
             resStatusCode.ACTION_COMPLETE,
             "User details fetched successfully",
             {
                 user,
-
-                // 🚀 PAGINATED WEBSITE LIST
                 webList,
                 webPagination: {
                     page: pageWeb,
@@ -663,7 +594,6 @@ export async function getNetworkUserById(req, res) {
                     totalPages: Math.ceil(webTotal / limitWeb)
                 },
 
-                // 🚀 PAGINATED EXCHANGE LIST
                 exchangesWorks,
                 exchangePagination: {
                     page: pageEx,
@@ -672,10 +602,12 @@ export async function getNetworkUserById(req, res) {
                     totalPages: Math.ceil(exTotal / limitEx)
                 },
 
-                completedTaskCount: Math.floor(completedTaskCount / 2),
+
+                completedTaskCount,
+
                 resRate: `${finalResponseRate}%`,
                 avgResTime: `${avgResponseTime} hours`,
-                trustScore: `${finalTrustScore}%`,
+                trustScore: `${finalTrustScore}%`
             }
         );
 
@@ -690,11 +622,10 @@ export async function getNetworkUserById(req, res) {
     }
 }
 
+
 export const updateUserById = async (req, res) => {
     try {
         const { userId } = req.params;
-
-        // Fix: convert data types
         const updateData = {
             name: req.body.name,
             email: req.body.email,
@@ -705,7 +636,6 @@ export const updateUserById = async (req, res) => {
             isActive: req.body.isActive === "true",
         };
 
-        // Remove undefined fields
         Object.keys(updateData).forEach(
             (key) => updateData[key] === undefined && delete updateData[key]
         );
@@ -758,7 +688,6 @@ export async function adminLogin(req, res) {
     };
     try {
         const user = await authModel.findOne({ email, isActive: true });
-        console.log('user', user)
         if (user) {
             if (user?.isVerified === true && user.role === 0) {
                 await decrypt(user?.password, async (responsePassword) => {
@@ -780,3 +709,99 @@ export async function adminLogin(req, res) {
         return response.error(res, resStatusCode.INTERNAL_SERVER_ERROR, resMessage.INTERNAL_SERVER_ERROR, {});
     };
 };
+
+export const blockUserById = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const myId = req.user._id;
+        const { isBlock } = req.body;
+
+        const user = await authModel.findById(myId);
+        const targetUser = await authModel.findById(userId);
+
+        if (!user || !targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        if (isBlock) {
+            await authModel.findByIdAndUpdate(myId, {
+                $addToSet: { blocksList: userId }
+            });
+
+            await authModel.findByIdAndUpdate(userId, {
+                $addToSet: { blockedBy: myId }
+            });
+
+        } else {
+            await authModel.findByIdAndUpdate(myId, {
+                $pull: { blocksList: userId }
+            });
+
+            await authModel.findByIdAndUpdate(userId, {
+                $pull: { blockedBy: myId }
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: isBlock ? "User Blocked" : "User Unblocked",
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export async function getReferralsDetails(req, res) {
+    try {
+        const userId = req.user._id;
+        const user = await authModel
+            .findById(userId)
+            .select("referralStats _id");
+
+        const topReferrers = await authModel
+            .find({ "referralStats.successful": { $gt: 0 } })
+            .sort({ "referralStats.successful": -1 })
+            .limit(5)
+            .select("name img referralStats.successful");
+
+        return response.success(
+            res,
+            resStatusCode.ACTION_COMPLETE,
+            "Referral details fetched",
+            {
+                userId: user._id,
+                stats: {
+                    totalReferrals: user?.referralStats?.total || 0,
+                    pendingInvites: user?.referralStats?.pending || 0,
+                    successfulReferrals: user?.referralStats?.successful || 0,
+                },
+
+                milestones: [
+                    {
+                        progress: user?.referralStats?.successful || 0,
+                    },
+                    {
+                        progress: user?.referralStats?.successful || 0,
+                    },
+                ],
+
+                topReferrers: topReferrers.map((u) => ({
+                    id: u._id,
+                    name: u.name,
+                    avatar: u.img || "",
+                    referrals: u.referralStats.successful,
+                })),
+            }
+        );
+    } catch (error) {
+        console.error("Error in getReferralsDetails:", error);
+        return response.error(
+            res,
+            resStatusCode.INTERNAL_SERVER_ERROR,
+            resMessage.INTERNAL_SERVER_ERROR,
+            {}
+        );
+    }
+}
+

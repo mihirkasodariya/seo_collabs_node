@@ -16,10 +16,6 @@ const planSchema = new Schema(
         subtitle: { type: String, required: true },
         price: { type: String, required: true },
         planTime: { type: String, required: true },
-        oneTime: { type: Boolean, default: false },
-        recommended: { type: Boolean, default: false },
-        color: { type: String },
-        borderColor: { type: String },
         isActive: { type: Boolean, default: true },
         isDelete: { type: Boolean, default: false },
         maxWebsites: { type: String },
@@ -30,7 +26,6 @@ const planSchema = new Schema(
         individualProfilesOnly: { type: String },
         cantInteractPremium: { type: String },
         emailSupportOnly: { type: String },
-        noLiveChatPrioritySupport: { type: String },
         basicLinkTrackingReport: { type: String },
         backlinkTrackingReportMonth: { type: String },
         maySeeAdvertisements: { type: String },
@@ -69,23 +64,23 @@ export const planValidation = Joi.object({
         "string.empty": "Price is required.",
         "any.required": "Price is required."
     }),
-    oneTime: Joi.boolean().optional().messages({
-        "boolean.base": "oneTime must be true or false."
-    }),
+    // oneTime: Joi.boolean().optional().messages({
+    //     "boolean.base": "oneTime must be true or false."
+    // }),
     features: Joi.array().items(featureValidation).required().min(1).messages({
         "array.base": "Features must be an array.",
         "array.min": "At least one feature is required.",
         "any.required": "Features list is required."
     }),
-    recommended: Joi.boolean().optional().messages({
-        "boolean.base": "Recommended must be true or false."
-    }),
-    color: Joi.string().optional().messages({
-        "string.base": "Color must be a string."
-    }),
-    borderColor: Joi.string().optional().messages({
-        "string.base": "Border color must be a string."
-    })
+    // recommended: Joi.boolean().optional().messages({
+    //     "boolean.base": "Recommended must be true or false."
+    // }),
+    // color: Joi.string().optional().messages({
+    //     "string.base": "Color must be a string."
+    // }),
+    // borderColor: Joi.string().optional().messages({
+    //     "string.base": "Border color must be a string."
+    // })
 });
 
 export const idValidation = Joi.object({

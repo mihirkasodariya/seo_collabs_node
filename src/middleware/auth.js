@@ -20,6 +20,7 @@ export async function generateJWToken(payload) {
     };
 };
 
+
 export async function validateAccessToken(req, res, next) {
     const token = req.headers.authorization || req.headers.Authorization;
     try {
@@ -35,6 +36,7 @@ export async function validateAccessToken(req, res, next) {
             return response.error(res, resStatusCode.INVALID_TOKEN, resMessage.UNAUTHORISED, {});
         };
         req.user = authenticatedUser;
+
         console.debug("\x1b[32m[AccessToken] Token Verified Successfully. Admin ID:\x1b[36m", req.user.id, "\x1b[0m");
         next();
     } catch (error) {

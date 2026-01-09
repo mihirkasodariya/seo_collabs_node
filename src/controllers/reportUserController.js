@@ -1,7 +1,6 @@
 import {
     reportUserModel,
     reportUserValidation,
-    idValidation
 } from "../models/reportUserModel.js";
 import response from "../utils/response.js";
 import { resStatusCode, resMessage } from "../utils/constants.js";

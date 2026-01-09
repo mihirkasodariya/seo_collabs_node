@@ -2,6 +2,7 @@ import { messageModel } from "../models/chatModel.js";
 import { authModel } from "../models/authModel.js";
 import mongoose from "mongoose";
 import { userExchangeModel } from "../models/userExchangeModel.js";
+import { connectedUsers } from "../socket/chatSocket.js"; // adjust path
 
 export const saveMessage = async (senderId, receiverId, message, seen = false) => {
     console.log('receiverId', receiverId)
@@ -18,7 +19,7 @@ export const getMessages = async (req, res) => {
         };
         const getTask = await userExchangeModel.find({
             userId: userId,
-            status: { $in: ["refused", "rejected"] }
+            status: { $in: ["refuse", "rejected"] }
         }).lean();
         console.log('getTask', getTask)
         const messages = await messageModel.find({
@@ -43,23 +44,61 @@ export const getMessages = async (req, res) => {
     }
 };
 
+
 export const getChatUsers = async (req, res) => {
     try {
-        const userId = req.user._id
-        console.log('userId', userId)
-        console.log("Fetching chat users for:", userId);
+        const userId = req.user._id;
 
         const sentTo = await messageModel.distinct("receiverId", { senderId: userId });
         const receivedFrom = await messageModel.distinct("senderId", { receiverId: userId });
+
         const allUserIds = [...new Set([...sentTo, ...receivedFrom])];
 
         if (allUserIds.length === 0) {
             return res.status(200).json({ success: true, data: [] });
-        };
-        const users = await authModel.find({ _id: { $in: allUserIds } }).select("_id name email img");
-        res.status(200).json({ success: true, count: users.length, data: users, });
+        }
+
+        const users = await authModel
+            .find({ _id: { $in: allUserIds } })
+            .select("_id name email img");
+
+        const updatedUsers = await Promise.all(
+            users.map(async (u) => {
+
+                const lastMsg = await messageModel
+                    .findOne({
+                        $or: [
+                            { senderId: userId, receiverId: u._id },
+                            { senderId: u._id, receiverId: userId }
+                        ]
+                    })
+                    .sort({ createdAt: -1 })
+                    .lean();
+                const unreadMessages = await messageModel.countDocuments({
+                    senderId: u._id,
+                    receiverId: userId,
+                    seen: false
+                });
+
+                return {
+                    ...u._doc,
+                    lastMessage: lastMsg?.message || "",
+                    unread: unreadMessages,
+                    isOnline: connectedUsers.has(u._id.toString()),
+                };
+            })
+        );
+
+        res.status(200).json({
+            success: true,
+            count: updatedUsers.length,
+            data: updatedUsers,
+        });
+
     } catch (error) {
-        console.error("Error fetching chat users:", error);
-        res.status(500).json({ success: false, message: "Server error while fetching chat users", });
-    };
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
 };
+
+

@@ -47,7 +47,7 @@ export const userExchangeValidation = Joi.object({
     }),
     instructions: Joi.string().optional().allow("").messages(),
     reqTaskId: Joi.string().optional(),
-    status: Joi.string().valid("waiting-for-approval", "refused", "inprogress", "submitted", "improvement", "completed", "rejected").required().messages({
+    status: Joi.string().valid("waiting-for-approval", "refuse", "inprogress", "submitted", "improvement", "completed", "rejected").required().messages({
         "any.only": "Invalid status value",
         "any.required": "Status is required",
     }),
